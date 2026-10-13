@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { ApiError } from '../../../api/client';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ticketsApi } from '../../../api/tickets';
-import type { PagedResult, TicketFilters, TicketListItem } from '../../../types/api';
+import { useAsyncData } from '../../../hooks/useAsyncData';
+import type { TicketFilters } from '../../../types/api';
 
 const DEBOUNCE_MS = 300;
 
@@ -19,40 +19,56 @@ export const emptyFilters: TicketFilters = {
   sortDirection: 'desc',
 };
 
-interface State {
-  isLoading: boolean;
-  data?: PagedResult<TicketListItem>;
-  error?: string;
-}
-
 /** Owns the ticket list's filters and the data they produce. */
 export function useTicketList() {
+  // The filters the request is built from. Being state, its identity changes only when one of
+  // them changes, so it is the one dependency of the fetch: a new filter needs no extra wiring.
   const [filters, setFilters] = useState<TicketFilters>(emptyFilters);
-  const [state, setState] = useState<State>({ isLoading: true });
 
-  const load = async () => {
-    setState((current) => ({ ...current, isLoading: true, error: undefined }));
-
-    try {
-      const data = await ticketsApi.getTickets(filters);
-      setState({ isLoading: false, data, error: undefined });
-    } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Unable to load tickets.';
-      setState((current) => ({ ...current, isLoading: false, error: message }));
-    }
-  };
+  // What is in the search box right now. It reaches `filters` once the typing settles, so a
+  // burst of keystrokes sends one request rather than one each.
+  const [searchText, setSearchText] = useState(emptyFilters.search);
 
   useEffect(() => {
-    const handle = window.setTimeout(load, DEBOUNCE_MS);
+    const handle = window.setTimeout(() => {
+      setFilters((current) =>
+        current.search === searchText ? current : { ...current, search: searchText, page: 1 },
+      );
+    }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filters object identity changes every render
-  }, [filters.search, filters.page, filters.pageSize]);
+  }, [searchText]);
 
-  const updateFilters = (patch: Partial<TicketFilters>) =>
-    setFilters((current) => ({ ...current, ...patch, page: patch.page ?? 1 }));
+  const load = useCallback(() => ticketsApi.getTickets(filters), [filters]);
+  const list = useAsyncData(load, 'Unable to load tickets.');
 
-  const resetFilters = () => setFilters(emptyFilters);
+  const updateFilters = useCallback((patch: Partial<TicketFilters>) => {
+    const { search, ...rest } = patch;
 
-  return { filters, updateFilters, resetFilters, reload: load, ...state };
+    if (search !== undefined) {
+      setSearchText(search);
+    }
+
+    if (Object.keys(rest).length > 0) {
+      setFilters((current) => ({ ...current, ...rest, page: rest.page ?? 1 }));
+    }
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setSearchText(emptyFilters.search);
+    setFilters(emptyFilters);
+  }, []);
+
+  // The filter bar shows the search box as typed, not as last sent.
+  const visibleFilters = useMemo(() => ({ ...filters, search: searchText }), [filters, searchText]);
+
+  return {
+    filters: visibleFilters,
+    updateFilters,
+    resetFilters,
+    reload: list.reload,
+    isLoading: list.isLoading,
+    data: list.data,
+    error: list.error,
+  };
 }
