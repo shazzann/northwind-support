@@ -148,7 +148,7 @@ public sealed class TicketQueriesFilterTests : IDisposable
     }
 
     private Task<PagedResult<TicketListItemDto>> SearchAsync(TicketQuery query) =>
-        new SearchTicketsQueryHandler(new TicketQueries(_database.Db, new FixedClock()))
+        new SearchTicketsQueryHandler(new TicketQueries(_database.Db, new FixedClock(), TestSla.Evaluator()))
             .HandleAsync(query, CancellationToken.None);
 
     private static string[] References(PagedResult<TicketListItemDto> result) =>

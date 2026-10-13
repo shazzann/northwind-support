@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Options;
 using SupportDesk.Application;
+using SupportDesk.Domain.Triage;
 using SupportDesk.Infrastructure;
 using SupportDesk.Presentation.Extensions;
 using SupportDesk.Presentation.Filters;
@@ -26,6 +28,12 @@ builder.Services.AddCors(options => options.AddPolicy(
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddOptions<SlaSettings>()
+    .Bind(builder.Configuration.GetSection(SlaSettings.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<SlaSettings>, SlaSettingsValidation>();
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SlaSettings>>().Value);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

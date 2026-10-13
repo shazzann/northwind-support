@@ -45,6 +45,12 @@ public sealed class Ticket : AggregateRoot
 
     public DateTime? ResolvedAtUtc { get; private set; }
 
+    /// <summary>
+    /// The length of the window that <see cref="DueAtUtc"/> closes, which "at risk" is measured
+    /// against. Null when no SLA applies.
+    /// </summary>
+    public int? SlaWindowMinutes { get; private set; }
+
     /// <summary>True while the ticket still needs work from an agent.</summary>
     public bool IsOpen => Status is not (TicketStatus.Resolved or TicketStatus.Closed);
 
@@ -100,6 +106,18 @@ public sealed class Ticket : AggregateRoot
 
         Status = status;
         UpdatedAtUtc = nowUtc;
+    }
+
+    /// <summary>
+    /// Starts the SLA clock: the ticket is due one window after <paramref name="startUtc"/>.
+    /// </summary>
+    public void StartSla(DateTime startUtc, int windowMinutes)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowMinutes);
+
+        SlaWindowMinutes = windowMinutes;
+        DueAtUtc = startUtc.AddMinutes(windowMinutes);
+        UpdatedAtUtc = startUtc;
     }
 
     /// <summary>

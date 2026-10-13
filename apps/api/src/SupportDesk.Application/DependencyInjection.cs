@@ -9,6 +9,8 @@ using SupportDesk.Application.Features.Tickets.Commands.ChangeTicketStatus;
 using SupportDesk.Application.Features.Tickets.Commands.RaiseTicket;
 using SupportDesk.Application.Features.Tickets.Queries.GetTicket;
 using SupportDesk.Application.Features.Tickets.Queries.SearchTickets;
+using SupportDesk.Domain.Aggregates.Tickets;
+using SupportDesk.Domain.Triage;
 
 namespace SupportDesk.Application;
 
@@ -17,8 +19,12 @@ namespace SupportDesk.Application;
 /// </summary>
 public static class DependencyInjection
 {
+    /// <remarks>Expects <see cref="SlaSettings"/> to be registered by the host.</remarks>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddSingleton<SlaPolicy>();
+        services.AddSingleton(sp => new SlaEvaluator(sp.GetRequiredService<SlaSettings>().AtRiskThresholdPercent));
+
         services.AddScoped<RaiseTicketCommandHandler>();
         services.AddScoped<ChangeTicketStatusCommandHandler>();
         services.AddScoped<AssignTicketCommandHandler>();

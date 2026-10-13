@@ -180,6 +180,8 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
                 row.Priority,
                 createdAtUtc);
 
+            ticket.StartSla(createdAtUtc, row.SlaWindowMinutes);
+
             if (row.AgentIndex is not null)
             {
                 ticket.AssignTo(agents[row.AgentIndex.Value - 1].Id, createdAtUtc);
@@ -194,7 +196,6 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
             var entry = db.Add(ticket);
             entry.Property(t => t.UpdatedAtUtc).CurrentValue =
                 createdAtUtc.AddMinutes(row.ResolvedAfterMinutes ?? row.CreatedMinutesAgo / 2);
-            entry.Property(t => t.DueAtUtc).CurrentValue = createdAtUtc.AddMinutes(row.SlaWindowMinutes);
         }
     }
 
