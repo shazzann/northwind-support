@@ -3,6 +3,7 @@ using SupportDesk.Application.Abstractions;
 using SupportDesk.Application.Contracts.Tickets;
 using SupportDesk.Application.Features.Tickets.Commands.AssignTicket;
 using SupportDesk.Application.Features.Tickets.Commands.ChangeTicketStatus;
+using SupportDesk.Application.Features.Tickets.Commands.EscalateTicket;
 using SupportDesk.Application.Features.Tickets.Commands.RaiseTicket;
 using SupportDesk.Application.Features.Tickets.Queries.GetTicket;
 using SupportDesk.Domain.Aggregates.Agents;
@@ -54,6 +55,14 @@ internal sealed class TicketCommandTestContext
 
         ChangeTicketStatus = new ChangeTicketStatusCommandHandler(Tickets.Object, UnitOfWork.Object, Clock, getTicket);
 
+        // The escalation just made, as the history query would return it.
+        TicketQueries.Setup(q => q.GetEscalationsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new TicketEscalationDto(0, TicketPriority.Low, TicketPriority.Medium, null, null, null, Clock.UtcNow, "Reason", "Team Lead", Clock.UtcNow)]);
+
+        EscalateTicket = new EscalateTicketCommandHandler(
+            Tickets.Object, Customers.Object, Categories.Object, AgentQueries.Object, TicketQueries.Object,
+            TestSla.Policy(), UnitOfWork.Object, Clock, getTicket, NullLogger<EscalateTicketCommandHandler>.Instance);
+
         AssignTicket = new AssignTicketCommandHandler(
             Tickets.Object, Agents.Object, UnitOfWork.Object, Clock, getTicket,
             NullLogger<AssignTicketCommandHandler>.Instance);
@@ -83,6 +92,8 @@ internal sealed class TicketCommandTestContext
     public ChangeTicketStatusCommandHandler ChangeTicketStatus { get; }
 
     public AssignTicketCommandHandler AssignTicket { get; }
+
+    public EscalateTicketCommandHandler EscalateTicket { get; }
 
     /// <summary>The ticket handed to the repository by the last create call.</summary>
     public Ticket? AddedTicket { get; private set; }
@@ -115,10 +126,10 @@ internal sealed class TicketCommandTestContext
         return customer;
     }
 
-    /// <summary>Makes this the category every request refers to, under id 3.</summary>
-    public Category ExistingCategory(Category category)
+    /// <summary>Makes this category exist, by default under the id the create requests use.</summary>
+    public Category ExistingCategory(Category category, int id = 3)
     {
-        category.WithId(3);
+        category.WithId(id);
         Categories.Setup(c => c.GetByIdAsync(category.Id, It.IsAny<CancellationToken>())).ReturnsAsync(category);
         return category;
     }
