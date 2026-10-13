@@ -5,6 +5,7 @@ import { Spinner } from '../../components/Spinner';
 import { useReferenceData } from '../../hooks/useReferenceData';
 import type { RaisedTicket } from '../../types/api';
 import { CreateTicketForm } from './components/CreateTicketForm';
+import { TriageResult } from './components/TriageResult';
 
 export function CreateTicketPage() {
   const reference = useReferenceData();
@@ -29,11 +30,12 @@ export function CreateTicketPage() {
         <ErrorMessage message={reference.error} onRetry={() => void reference.reload()} />
       )}
 
-      {created && (
+      {raised && created && (
         <div className="card notice" role="status">
           <p>
             Raised <strong>{created.reference}</strong> for {created.customer.name}.
           </p>
+          <TriageResult raised={raised} />
           <div className="button-row">
             <button
               type="button"

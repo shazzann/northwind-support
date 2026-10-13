@@ -68,6 +68,7 @@ describe('useTicketList', () => {
     ['assigned agent', { assignedAgentId: 4 }],
     ['unassigned only', { unassignedOnly: true }],
     ['sort', { sortBy: 'dueAtUtc', sortDirection: 'asc' }],
+    ['SLA status', { slaStatus: 'AtRisk' }],
   ])('sends a request with the new %s as soon as it changes', async (_, patch) => {
     const { result } = renderHook(() => useTicketList());
     await flush();

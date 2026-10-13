@@ -90,6 +90,7 @@ export interface TicketFilters {
   customerId?: number;
   assignedAgentId?: number;
   unassignedOnly?: boolean;
+  slaStatus?: SlaStatus;
   page: number;
   pageSize: number;
   sortBy: TicketSortField;
@@ -108,6 +109,32 @@ export interface TicketTriage {
 export interface RaisedTicket {
   ticket: TicketDetail;
   triage: TicketTriage;
+}
+
+/** Body of POST /api/tickets/{id}/escalate. */
+export interface EscalateTicketPayload {
+  reason: string;
+  escalatedBy: string;
+}
+
+/** One recorded escalation, with the before and after of everything it changed. */
+export interface TicketEscalation {
+  id: number;
+  fromPriority: TicketPriority;
+  toPriority: TicketPriority;
+  fromAgent: AgentSummary | null;
+  toAgent: AgentSummary | null;
+  fromDueAtUtc: string | null;
+  toDueAtUtc: string;
+  reason: string;
+  escalatedBy: string;
+  escalatedAtUtc: string;
+}
+
+/** Response of POST /api/tickets/{id}/escalate. */
+export interface EscalationResult {
+  ticket: TicketDetail;
+  escalation: TicketEscalation;
 }
 
 export interface CreateTicketPayload {
