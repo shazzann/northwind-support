@@ -32,6 +32,9 @@ public sealed record TicketQuery
 
     public bool UnassignedOnly { get; init; }
 
+    /// <summary>Where the ticket stands against its SLA right now; derived, so evaluated in SQL.</summary>
+    public SlaStatus? SlaStatus { get; init; }
+
     /// <summary>createdAtUtc | updatedAtUtc | dueAtUtc | priority | status.</summary>
     public string SortBy { get; init; } = "createdAtUtc";
 

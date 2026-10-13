@@ -131,6 +131,29 @@ public sealed class TicketQueriesFilterTests : IDisposable
         Assert.Equal(2, result.TotalCount);
     }
 
+    [Theory]
+    [InlineData(SlaStatus.NotApplicable, "TCK-0001")]
+    [InlineData(SlaStatus.WithinSla, "TCK-0002")]
+    [InlineData(SlaStatus.AtRisk, "TCK-0003")]
+    [InlineData(SlaStatus.Breached, "TCK-0004", "TCK-0006")]
+    [InlineData(SlaStatus.Met, "TCK-0005")]
+    public async Task SlaStatus_FiltersByTheDerivedStatus(SlaStatus status, params string[] expected)
+    {
+        // A 4 h window; the clock reads FixedClock.DefaultNow.
+        _database.AddTicket("TCK-0001");
+        _database.AddTicket("TCK-0002", slaStartedAt: FixedClock.DefaultNow.AddHours(-1));
+        _database.AddTicket("TCK-0003", slaStartedAt: FixedClock.DefaultNow.AddHours(-3.5));
+        _database.AddTicket("TCK-0004", slaStartedAt: FixedClock.DefaultNow.AddHours(-5));
+        _database.AddTicket("TCK-0005", slaStartedAt: FixedClock.DefaultNow.AddHours(-5), resolvedAfter: TimeSpan.FromHours(2));
+        _database.AddTicket("TCK-0006", slaStartedAt: FixedClock.DefaultNow.AddHours(-9), resolvedAfter: TimeSpan.FromHours(6));
+
+        var result = await SearchAsync(new TicketQuery { SlaStatus = status });
+
+        Assert.Equal(expected, References(result));
+        Assert.Equal(expected.Length, result.TotalCount);
+        Assert.All(result.Items, item => Assert.Equal(status, item.SlaStatus));
+    }
+
     [Fact]
     public async Task CountAndPages_DescribeTheFilteredSet()
     {

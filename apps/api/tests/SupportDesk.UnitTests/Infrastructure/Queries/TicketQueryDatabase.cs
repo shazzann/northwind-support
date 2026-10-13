@@ -49,6 +49,8 @@ internal sealed class TicketQueryDatabase : IDisposable
     public Agent Sara { get; }
 
     /// <summary>Saves a ticket; anything not given gets a harmless default.</summary>
+    /// <param name="slaStartedAt">Starts a 4 h SLA window here; no SLA when null.</param>
+    /// <param name="resolvedAfter">Resolves the ticket this long after its window started.</param>
     public Ticket AddTicket(
         string reference,
         string title = "Something is not working",
@@ -56,7 +58,9 @@ internal sealed class TicketQueryDatabase : IDisposable
         Category? category = null,
         TicketPriority priority = TicketPriority.Medium,
         TicketStatus status = TicketStatus.New,
-        Agent? agent = null)
+        Agent? agent = null,
+        DateTime? slaStartedAt = null,
+        TimeSpan? resolvedAfter = null)
     {
         var ticket = Ticket.Raise(
             reference,
@@ -75,6 +79,16 @@ internal sealed class TicketQueryDatabase : IDisposable
         if (status != TicketStatus.New)
         {
             ticket.ChangeStatus(status, FixedClock.DefaultNow);
+        }
+
+        if (slaStartedAt is { } start)
+        {
+            ticket.StartSla(start, 4 * 60);
+
+            if (resolvedAfter is { } after)
+            {
+                ticket.ChangeStatus(TicketStatus.Resolved, start + after);
+            }
         }
 
         return Add(ticket);

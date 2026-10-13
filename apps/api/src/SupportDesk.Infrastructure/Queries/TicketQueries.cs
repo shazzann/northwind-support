@@ -67,7 +67,7 @@ public sealed class TicketQueries(SupportDbContext db, IClock clock, SlaEvaluato
     {
         var slaStatus = SlaStatusAt(clock.UtcNow);
 
-        var tickets = ApplyFilters(TicketsWithLabels(), query);
+        var tickets = ApplyFilters(TicketsWithLabels(), query, slaStatus);
 
         var totalCount = await tickets.CountAsync(ct);
 
@@ -148,7 +148,13 @@ public sealed class TicketQueries(SupportDbContext db, IClock clock, SlaEvaluato
     /// Search uses <c>Contains</c>, which EF sends as a parameterised, escaped <c>LIKE</c>; it is
     /// case-insensitive through the database's default collation.
     /// </remarks>
-    private static IQueryable<TicketWithLabels> ApplyFilters(IQueryable<TicketWithLabels> source, TicketQuery query)
+    /// <param name="source">The tickets to narrow.</param>
+    /// <param name="query">The filters to apply.</param>
+    /// <param name="slaStatus">The SLA rule as of now, shared with the projection.</param>
+    private static IQueryable<TicketWithLabels> ApplyFilters(
+        IQueryable<TicketWithLabels> source,
+        TicketQuery query,
+        Expression<Func<TicketWithLabels, SlaStatus>> slaStatus)
     {
         var search = query.Search;
 
@@ -159,6 +165,7 @@ public sealed class TicketQueries(SupportDbContext db, IClock clock, SlaEvaluato
             .WhereIf(query.CustomerId is not null, x => x.Ticket.CustomerId == query.CustomerId)
             .WhereIf(query.AssignedAgentId is not null, x => x.Ticket.AssignedAgentId == query.AssignedAgentId)
             .WhereIf(query.UnassignedOnly, x => x.Ticket.AssignedAgentId == null)
+            .WhereIf(query.SlaStatus is not null, slaStatus.Then(status => status == query.SlaStatus))
             .WhereIf(search is not null, x =>
                 x.Ticket.Title.Contains(search!)
                 || x.Ticket.Reference.Contains(search!)
