@@ -6,9 +6,11 @@ using SupportDesk.Application.Features.Tickets.Commands.ChangeTicketStatus;
 using SupportDesk.Application.Features.Tickets.Commands.RaiseTicket;
 using SupportDesk.Application.Features.Tickets.Queries.GetTicket;
 using SupportDesk.Domain.Aggregates.Agents;
+using SupportDesk.Domain.Aggregates.Categories;
 using SupportDesk.Domain.Aggregates.Customers;
 using SupportDesk.Domain.Aggregates.Tickets;
 using SupportDesk.Domain.Repositories;
+using SupportDesk.Domain.Triage;
 using SupportDesk.UnitTests.TestDoubles;
 
 namespace SupportDesk.UnitTests.Application.Features.Tickets.Commands;
@@ -21,11 +23,11 @@ internal sealed class TicketCommandTestContext
 {
     public TicketCommandTestContext()
     {
-        Customers.Setup(c => c.ExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        ExistingCustomer(CustomerTier.Standard);
+        ExistingCategory(new Category("Technical", requiresSpecialist: false, forcesCriticalPriority: false));
 
-        Categories.Setup(c => c.ExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        AgentQueries.Setup(a => a.GetCandidatesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Candidates);
 
         Tickets.Setup(t => t.NextReferenceAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync("TCK-0041");
@@ -47,8 +49,8 @@ internal sealed class TicketCommandTestContext
         var getTicket = new GetTicketQueryHandler(TicketQueries.Object);
 
         RaiseTicket = new RaiseTicketCommandHandler(
-            Tickets.Object, Customers.Object, Categories.Object, UnitOfWork.Object, Clock, getTicket,
-            NullLogger<RaiseTicketCommandHandler>.Instance);
+            Tickets.Object, Customers.Object, Categories.Object, AgentQueries.Object, TestSla.Policy(),
+            UnitOfWork.Object, Clock, getTicket, NullLogger<RaiseTicketCommandHandler>.Instance);
 
         ChangeTicketStatus = new ChangeTicketStatusCommandHandler(Tickets.Object, UnitOfWork.Object, Clock, getTicket);
 
@@ -64,6 +66,11 @@ internal sealed class TicketCommandTestContext
     public Mock<ICategoryRepository> Categories { get; } = new();
 
     public Mock<IAgentRepository> Agents { get; } = new();
+
+    public Mock<IAgentQueries> AgentQueries { get; } = new();
+
+    /// <summary>The agents assignment chooses from; nobody unless a test says otherwise.</summary>
+    public List<AgentCandidate> Candidates { get; } = [];
 
     public Mock<IUnitOfWork> UnitOfWork { get; } = new();
 
@@ -99,6 +106,21 @@ internal sealed class TicketCommandTestContext
         }
 
         Agents.Setup(a => a.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+    }
+
+    public Customer ExistingCustomer(CustomerTier tier)
+    {
+        var customer = new Customer("Contoso Ltd", "support@contoso.example", null, tier, Clock.UtcNow).WithId(1);
+        Customers.Setup(c => c.GetByIdAsync(customer.Id, It.IsAny<CancellationToken>())).ReturnsAsync(customer);
+        return customer;
+    }
+
+    /// <summary>Makes this the category every request refers to, under id 3.</summary>
+    public Category ExistingCategory(Category category)
+    {
+        category.WithId(3);
+        Categories.Setup(c => c.GetByIdAsync(category.Id, It.IsAny<CancellationToken>())).ReturnsAsync(category);
+        return category;
     }
 
     public void VerifySaved(Times times) =>

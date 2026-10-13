@@ -3,13 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ErrorMessage } from '../../components/ErrorMessage';
 import { Spinner } from '../../components/Spinner';
 import { useReferenceData } from '../../hooks/useReferenceData';
-import type { TicketDetail } from '../../types/api';
+import type { RaisedTicket } from '../../types/api';
 import { CreateTicketForm } from './components/CreateTicketForm';
 
 export function CreateTicketPage() {
   const reference = useReferenceData();
   const navigate = useNavigate();
-  const [created, setCreated] = useState<TicketDetail>();
+  const [raised, setRaised] = useState<RaisedTicket>();
+  const created = raised?.ticket;
 
   return (
     <section>
@@ -41,7 +42,7 @@ export function CreateTicketPage() {
             >
               Open {created.reference}
             </button>
-            <button type="button" className="button button--ghost" onClick={() => setCreated(undefined)}>
+            <button type="button" className="button button--ghost" onClick={() => setRaised(undefined)}>
               Raise another
             </button>
           </div>
@@ -52,7 +53,7 @@ export function CreateTicketPage() {
         <CreateTicketForm
           customers={reference.data.customers}
           categories={reference.data.categories}
-          onCreated={setCreated}
+          onCreated={setRaised}
         />
       )}
     </section>

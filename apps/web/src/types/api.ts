@@ -96,6 +96,20 @@ export interface TicketFilters {
   sortDirection: SortDirection;
 }
 
+/** Why triage gave a new ticket its priority, due date and owner. */
+export interface TicketTriage {
+  priorityReason: string;
+  slaWindowMinutes: number;
+  slaReason: string;
+  assignmentReason: string;
+}
+
+/** Response of POST /api/tickets: the ticket as triaged, and the reasons. */
+export interface RaisedTicket {
+  ticket: TicketDetail;
+  triage: TicketTriage;
+}
+
 export interface CreateTicketPayload {
   title: string;
   description: string;

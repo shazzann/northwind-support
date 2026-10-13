@@ -27,16 +27,21 @@ public sealed class TicketsController : ControllerBase
     public Task<TicketDetailDto> Get(int id, [FromServices] GetTicketQueryHandler handler, CancellationToken ct) =>
         handler.HandleAsync(id, ct);
 
-    /// <summary>Raises a new ticket.</summary>
+    /// <summary>
+    /// Raises a new ticket and triages it. Returns the ticket and the reasons for its priority,
+    /// due date and owner. No eligible agent is a normal outcome: the ticket is still created,
+    /// unassigned, with the reason.
+    /// </summary>
     [HttpPost]
-    public async Task<ActionResult<TicketDetailDto>> Create(
+    [ProducesResponseType<RaisedTicketDto>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<RaisedTicketDto>> Create(
         CreateTicketRequest request,
         [FromServices] RaiseTicketCommandHandler handler,
         CancellationToken ct)
     {
         var created = await handler.HandleAsync(request, ct);
 
-        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+        return CreatedAtAction(nameof(Get), new { id = created.Ticket.Id }, created);
     }
 
     /// <summary>Moves a ticket to another status.</summary>

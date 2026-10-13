@@ -1,4 +1,5 @@
 using SupportDesk.Application.Contracts.Agents;
+using SupportDesk.Domain.Triage;
 
 namespace SupportDesk.Application.Abstractions;
 
@@ -8,4 +9,10 @@ namespace SupportDesk.Application.Abstractions;
 public interface IAgentQueries
 {
     Task<IReadOnlyList<AgentDto>> GetAllAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Every agent with what assignment needs to judge them - limit, open tickets and
+    /// specialisms - in a single query. Eligibility itself is decided by <see cref="AgentSelector"/>.
+    /// </summary>
+    Task<IReadOnlyList<AgentCandidate>> GetCandidatesAsync(CancellationToken ct);
 }
