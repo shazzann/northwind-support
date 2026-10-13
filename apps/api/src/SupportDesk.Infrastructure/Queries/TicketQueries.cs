@@ -17,13 +17,12 @@ namespace SupportDesk.Infrastructure.Queries;
 public sealed class TicketQueries(SupportDbContext db, IClock clock) : ITicketQueries
 {
     /// <remarks>
-    /// Sorts and pages every ticket. The filter values bound into <paramref name="query"/>
-    /// (search, status, priority, category, customer, agent, unassigned-only) are not applied
-    /// yet: server-side filtering is still to be built.
+    /// Filters in SQL before counting and paging, so the total and the pager always describe
+    /// the filtered set.
     /// </remarks>
     public async Task<PagedResult<TicketListItemDto>> GetPagedAsync(TicketQuery query, CancellationToken ct)
     {
-        var tickets = TicketsWithLabels();
+        var tickets = ApplyFilters(TicketsWithLabels(), query);
 
         var totalCount = await tickets.CountAsync(ct);
 
@@ -116,6 +115,32 @@ public sealed class TicketQueries(SupportDbContext db, IClock clock) : ITicketQu
         join category in db.Set<Category>() on ticket.CategoryId equals category.Id
         from agent in db.Set<Agent>().Where(a => a.Id == ticket.AssignedAgentId).DefaultIfEmpty()
         select new TicketWithLabels { Ticket = ticket, Customer = customer, Category = category, Agent = agent };
+
+    /// <summary>
+    /// Every supplied filter, combined with AND. Each is one <c>WhereIf</c>, so a further filter
+    /// is one more line here; all of them become the SQL WHERE clause, ahead of the count and
+    /// the page.
+    /// </summary>
+    /// <remarks>
+    /// Search uses <c>Contains</c>, which EF sends as a parameterised, escaped <c>LIKE</c>; it is
+    /// case-insensitive through the database's default collation.
+    /// </remarks>
+    private static IQueryable<TicketWithLabels> ApplyFilters(IQueryable<TicketWithLabels> source, TicketQuery query)
+    {
+        var search = query.Search;
+
+        return source
+            .WhereIf(query.Status is not null, x => x.Ticket.Status == query.Status)
+            .WhereIf(query.Priority is not null, x => x.Ticket.Priority == query.Priority)
+            .WhereIf(query.CategoryId is not null, x => x.Ticket.CategoryId == query.CategoryId)
+            .WhereIf(query.CustomerId is not null, x => x.Ticket.CustomerId == query.CustomerId)
+            .WhereIf(query.AssignedAgentId is not null, x => x.Ticket.AssignedAgentId == query.AssignedAgentId)
+            .WhereIf(query.UnassignedOnly, x => x.Ticket.AssignedAgentId == null)
+            .WhereIf(search is not null, x =>
+                x.Ticket.Title.Contains(search!)
+                || x.Ticket.Reference.Contains(search!)
+                || x.Customer.Name.Contains(search!));
+    }
 
     private static IQueryable<TicketWithLabels> ApplySort(IQueryable<TicketWithLabels> source, TicketQuery query)
     {
