@@ -19,6 +19,9 @@ public sealed class AgentConfiguration : IEntityTypeConfiguration<Agent>
 
         builder.Property(a => a.CreatedAtUtc).HasColumnType("datetime2(3)");
 
+        // Identity's v3 hash format is about 84 characters; the headroom allows a future format.
+        builder.Property(a => a.PasswordHash).HasMaxLength(256);
+
         builder.HasIndex(a => a.Email).IsUnique().HasDatabaseName("UQ_Agents_Email");
 
         builder.HasMany(a => a.Specializations)

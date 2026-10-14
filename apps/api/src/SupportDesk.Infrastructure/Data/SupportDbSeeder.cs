@@ -10,15 +10,25 @@ namespace SupportDesk.Infrastructure.Data;
 
 /// <summary>
 /// Development seed data: the small support desk the team uses to demo the application.
-/// Mirrors <c>database/02_seed.sql</c>, including the relative timestamps, so both routes
-/// produce the same database.
+/// Mirrors the starter data in <c>db/seed.sql</c>, including the relative timestamps, plus what
+/// the migrations since have added (SLA windows, hashed development passwords).
 /// </summary>
 /// <remarks>
-/// Every aggregate is built through its own behaviour. The two historical values no behaviour
-/// produces - a ticket's last update and its due date - are set through EF Core directly.
+/// Every aggregate is built through its own behaviour. The one historical value no behaviour
+/// produces - a ticket's last update - is set through EF Core directly.
 /// </remarks>
-public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<SupportDbSeeder> logger)
+public sealed class SupportDbSeeder(
+    SupportDbContext db,
+    IClock clock,
+    IPasswordHasher passwords,
+    ILogger<SupportDbSeeder> logger)
 {
+    /// <summary>
+    /// Every seeded agent's password. A local development fixture, published in the README;
+    /// it exists only in databases this seeder creates.
+    /// </summary>
+    public const string DevelopmentPassword = "LocalDev-Only-1";
+
     /// <summary>Seeds the database, unless it already has tickets in it.</summary>
     public async Task SeedAsync(CancellationToken ct = default)
     {
@@ -33,6 +43,13 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
         var categories = SeedCategories();
         var customers = SeedCustomers(now);
         var agents = SeedAgents(now);
+
+        // Hashed here, at seed time, so no hash (or password) sits in source control. One hash
+        // per agent: each gets its own salt.
+        foreach (var agent in agents)
+        {
+            agent.SetPasswordHash(passwords.Hash(DevelopmentPassword));
+        }
 
         db.AddRange(categories);
         db.AddRange(customers);
