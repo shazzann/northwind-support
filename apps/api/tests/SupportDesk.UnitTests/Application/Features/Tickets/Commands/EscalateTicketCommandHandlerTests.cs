@@ -10,7 +10,7 @@ namespace SupportDesk.UnitTests.Application.Features.Tickets.Commands;
 
 public class EscalateTicketCommandHandlerTests
 {
-    private static readonly EscalateTicketRequest Request = new("Customer cannot trade", "Team Lead");
+    private static readonly EscalateTicketRequest Request = new("Customer cannot trade");
 
     private readonly TicketCommandTestContext _context = new();
 
@@ -55,15 +55,16 @@ public class EscalateTicketCommandHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_RecordsWhoEscalatedAndWhy()
+    public async Task HandleAsync_RecordsTheSignedInAgentAsWhoEscalated_AndWhy()
     {
         var ticket = ExistingTicket(TicketPriority.Low);
+        _context.CurrentUser.Setup(u => u.FullName).Returns("Priya Nair");
 
         await _context.EscalateTicket.HandleAsync(ticket.Id, Request, CancellationToken.None);
 
         var escalation = Assert.Single(ticket.Escalations);
         Assert.Equal("Customer cannot trade", escalation.Reason);
-        Assert.Equal("Team Lead", escalation.EscalatedBy);
+        Assert.Equal("Priya Nair", escalation.EscalatedBy);
         Assert.Equal(_context.Clock.UtcNow, escalation.EscalatedAtUtc);
     }
 

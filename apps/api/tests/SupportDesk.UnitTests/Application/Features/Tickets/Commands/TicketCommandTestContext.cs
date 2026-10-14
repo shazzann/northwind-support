@@ -27,6 +27,9 @@ internal sealed class TicketCommandTestContext
         ExistingCustomer(CustomerTier.Standard);
         ExistingCategory(new Category("Technical", requiresSpecialist: false, forcesCriticalPriority: false));
 
+        CurrentUser.Setup(u => u.AgentId).Returns(1);
+        CurrentUser.Setup(u => u.FullName).Returns("Alex Turner");
+
         AgentQueries.Setup(a => a.GetCandidatesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => Candidates);
 
@@ -61,7 +64,8 @@ internal sealed class TicketCommandTestContext
 
         EscalateTicket = new EscalateTicketCommandHandler(
             Tickets.Object, Customers.Object, Categories.Object, AgentQueries.Object, TicketQueries.Object,
-            TestSla.Policy(), UnitOfWork.Object, Clock, getTicket, NullLogger<EscalateTicketCommandHandler>.Instance);
+            CurrentUser.Object, TestSla.Policy(), UnitOfWork.Object, Clock, getTicket,
+            NullLogger<EscalateTicketCommandHandler>.Instance);
 
         AssignTicket = new AssignTicketCommandHandler(
             Tickets.Object, Agents.Object, UnitOfWork.Object, Clock, getTicket,
@@ -77,6 +81,9 @@ internal sealed class TicketCommandTestContext
     public Mock<IAgentRepository> Agents { get; } = new();
 
     public Mock<IAgentQueries> AgentQueries { get; } = new();
+
+    /// <summary>The signed-in agent: Alex Turner, unless a test says otherwise.</summary>
+    public Mock<ICurrentUser> CurrentUser { get; } = new();
 
     /// <summary>The agents assignment chooses from; nobody unless a test says otherwise.</summary>
     public List<AgentCandidate> Candidates { get; } = [];

@@ -11,7 +11,8 @@ namespace SupportDesk.Application.Features.Tickets.Commands.EscalateTicket;
 
 /// <summary>
 /// Escalates a ticket (BR-7). The ticket raises its priority, restarts its SLA window and
-/// records the escalation; the owner is re-evaluated with the same rules as on create.
+/// records the escalation against the signed-in agent; the owner is re-evaluated with the
+/// same rules as on create.
 /// </summary>
 public sealed class EscalateTicketCommandHandler(
     ITicketRepository tickets,
@@ -19,6 +20,7 @@ public sealed class EscalateTicketCommandHandler(
     ICategoryRepository categories,
     IAgentQueries agents,
     ITicketQueries ticketQueries,
+    ICurrentUser currentUser,
     SlaPolicy sla,
     IUnitOfWork unitOfWork,
     IClock clock,
@@ -44,7 +46,7 @@ public sealed class EscalateTicketCommandHandler(
             category, await agents.GetCandidatesAsync(ct), ticket.AssignedAgentId);
 
         var escalation = ticket.Escalate(
-            sla, customer.Tier, assignment.AgentId, request.Reason, request.EscalatedBy, clock.UtcNow);
+            sla, customer.Tier, assignment.AgentId, request.Reason, currentUser.FullName, clock.UtcNow);
 
         await unitOfWork.SaveChangesAsync(ct);
 

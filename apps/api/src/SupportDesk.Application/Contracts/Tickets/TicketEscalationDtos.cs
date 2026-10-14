@@ -2,10 +2,12 @@ using SupportDesk.Domain.Aggregates.Tickets;
 
 namespace SupportDesk.Application.Contracts.Tickets;
 
-/// <summary>Body of POST /api/tickets/{id}/escalate.</summary>
+/// <summary>
+/// Body of POST /api/tickets/{id}/escalate. Who is escalating is not part of it: that is the
+/// signed-in agent, taken from their token.
+/// </summary>
 /// <param name="Reason">Why the ticket needs escalating; 5 to 500 characters.</param>
-/// <param name="EscalatedBy">Who is escalating it.</param>
-public sealed record EscalateTicketRequest(string Reason, string EscalatedBy);
+public sealed record EscalateTicketRequest(string Reason);
 
 /// <summary>One recorded escalation: the before and after of each thing it changed.</summary>
 public sealed record TicketEscalationDto(

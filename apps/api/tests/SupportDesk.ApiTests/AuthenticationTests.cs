@@ -84,6 +84,20 @@ public sealed class AuthenticationTests(SupportDeskApiFactory api) : IClassFixtu
     }
 
     [Fact]
+    public async Task Escalation_IsRecordedAgainstTheSignedInAgent_NotWhatTheBodyClaims()
+    {
+        var client = await api.SignedInClientAsync("priya.nair@northwind-support.example");
+
+        // TCK-0002 is a Medium, open ticket in the seed data.
+        var response = await client.PostAsJsonAsync(
+            "/api/tickets/2/escalate", new { reason = "Customer cannot export anything", escalatedBy = "Somebody Else" });
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Priya Nair", body.GetProperty("escalation").GetProperty("escalatedBy").GetString());
+    }
+
+    [Fact]
     public void OnlyLogin_IsOpenToAnonymousCallers()
     {
         var anonymous = api.Services.GetRequiredService<EndpointDataSource>().Endpoints
