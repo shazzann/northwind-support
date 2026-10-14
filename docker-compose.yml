@@ -1,5 +1,5 @@
-# SQL Server for local development only. The password below is a throwaway local
-# placeholder - never commit a real credential.
+# SQL Server and the API for local development only. The password and signing key defaults
+# below are throwaway local placeholders - never commit a real credential.
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -22,6 +22,29 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+
+  # The API, built from apps/api/Dockerfile. `docker compose up --build` brings up both services;
+  # `npm run db:up` still starts SQL Server alone, for running the API on the host.
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: supportdesk-api
+    environment:
+      # Production unless .env says otherwise: the image depends on no development settings.
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
+      # Reaches SQL Server by its service name on the compose network.
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=SupportDesk;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Local_Dev_Password1};TrustServerCertificate=True;Encrypt=False"
+      # Like the SA password above, a throwaway local default; set Jwt__SigningKey in .env
+      # (see .env.example) for anything that is not your own machine.
+      Jwt__SigningKey: "${Jwt__SigningKey:-local-compose-only-signing-key-not-a-secret}"
+      # An empty volume comes up migrated and seeded. Not how a real deployment migrates: see README.
+      Database__MigrateAndSeedOnStartup: "true"
+    ports:
+      - "5080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
 
 volumes:
   supportdesk-sql:

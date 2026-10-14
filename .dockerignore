@@ -1,0 +1,30 @@
+# The API image is built with the repository root as its context (see apps/api/Dockerfile).
+# Send the daemon only what that build needs: smaller context, fewer cache misses, no secrets.
+
+# Build output and dependencies - rebuilt inside the image.
+**/bin/
+**/obj/
+**/node_modules/
+**/TestResults/
+
+# Source control, editors, local secrets.
+.git/
+.vs/
+.vscode/
+.idea/
+.env
+.env.*
+
+# Local-only settings: the development connection string and signing key never reach an image.
+# The container gets its configuration from environment variables at run time.
+**/appsettings.Development.json
+**/Properties/launchSettings.json
+
+# Not part of the API.
+apps/web/
+apps/api/tests/
+db/
+spec/
+.github/
+*.md
+*.pdf
