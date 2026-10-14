@@ -8,4 +8,7 @@ namespace SupportDesk.Domain.Repositories;
 public interface IAgentRepository
 {
     Task<Agent?> GetByIdAsync(int id, CancellationToken ct);
+
+    /// <summary>Loads an agent by sign-in email, untracked, or null when nobody has it.</summary>
+    Task<Agent?> GetByEmailAsync(string email, CancellationToken ct);
 }

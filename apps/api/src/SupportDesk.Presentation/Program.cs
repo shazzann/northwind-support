@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 using SupportDesk.Application;
 using SupportDesk.Domain.Triage;
 using SupportDesk.Infrastructure;
@@ -27,13 +28,29 @@ builder.Services.AddCors(options => options.AddPolicy(
         .AllowAnyMethod()));
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // Lets Swagger UI call the API: sign in, then paste the token into "Authorize".
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "The token from POST /api/auth/login."
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
 
 builder.Services.AddOptions<SlaSettings>()
     .Bind(builder.Configuration.GetSection(SlaSettings.SectionName))
     .ValidateOnStart();
 builder.Services.AddSingleton<IValidateOptions<SlaSettings>, SlaSettingsValidation>();
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<SlaSettings>>().Value);
+
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -53,6 +70,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(FrontendCorsPolicy);
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
+
+/// <summary>Visible to the API tests, which host the application in memory.</summary>
+public partial class Program;

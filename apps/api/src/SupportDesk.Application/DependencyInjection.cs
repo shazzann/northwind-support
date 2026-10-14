@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SupportDesk.Application.Features.Agents.Queries.GetAgents;
+using SupportDesk.Application.Features.Auth.Commands.Login;
+using SupportDesk.Application.Features.Auth.Queries.GetCurrentAgent;
 using SupportDesk.Application.Features.Categories.Queries.GetCategories;
 using SupportDesk.Application.Features.Customers.Queries.GetCustomer;
 using SupportDesk.Application.Features.Customers.Queries.GetCustomers;
@@ -21,11 +23,17 @@ namespace SupportDesk.Application;
 /// </summary>
 public static class DependencyInjection
 {
-    /// <remarks>Expects <see cref="SlaSettings"/> to be registered by the host.</remarks>
+    /// <remarks>
+    /// Expects the host to register <see cref="SlaSettings"/>, and the web-facing abstractions
+    /// <see cref="Abstractions.ITokenIssuer"/> and <see cref="Abstractions.ICurrentUser"/>.
+    /// </remarks>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddSingleton<SlaPolicy>();
         services.AddSingleton(sp => new SlaEvaluator(sp.GetRequiredService<SlaSettings>().AtRiskThresholdPercent));
+
+        services.AddScoped<LoginCommandHandler>();
+        services.AddScoped<GetCurrentAgentQueryHandler>();
 
         services.AddScoped<RaiseTicketCommandHandler>();
         services.AddScoped<ChangeTicketStatusCommandHandler>();
