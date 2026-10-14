@@ -3,7 +3,6 @@ import type { EscalateTicketPayload, TicketDetail, TicketPriority } from '../../
 /** The API's limits (TicketEscalation in the domain), checked here so bad input never leaves the page. */
 export const REASON_MIN_LENGTH = 5;
 export const REASON_MAX_LENGTH = 500;
-export const ESCALATED_BY_MAX_LENGTH = 100;
 
 const priorityOrder: TicketPriority[] = ['Low', 'Medium', 'High', 'Critical'];
 
@@ -34,12 +33,6 @@ export function validateEscalation(payload: EscalateTicketPayload): EscalationEr
 
   if (reasonLength < REASON_MIN_LENGTH || reasonLength > REASON_MAX_LENGTH) {
     errors.reason = `Give a reason of ${REASON_MIN_LENGTH} to ${REASON_MAX_LENGTH} characters.`;
-  }
-
-  if (payload.escalatedBy.trim() === '') {
-    errors.escalatedBy = 'Say who is escalating the ticket.';
-  } else if (payload.escalatedBy.trim().length > ESCALATED_BY_MAX_LENGTH) {
-    errors.escalatedBy = `Keep the name to ${ESCALATED_BY_MAX_LENGTH} characters.`;
   }
 
   return errors;

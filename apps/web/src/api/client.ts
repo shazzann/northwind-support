@@ -1,3 +1,4 @@
+import { clearSession, getSession } from '../auth/session';
 import type { ProblemDetails } from '../types/api';
 
 /**
@@ -28,15 +29,26 @@ export class ApiError extends Error {
 /**
  * The single place that talks to the API. Returns parsed JSON, or throws an
  * {@link ApiError} that callers can show to the user.
+ *
+ * Sends the signed-in agent's token with every call. A 401 to a call that carried a token
+ * means the session is over (expired, or the agent deactivated): it is cleared, and the
+ * protected routes send the agent to sign in again.
  */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const session = getSession();
+
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
       ...(init?.headers ?? {}),
     },
   });
+
+  if (response.status === 401 && session) {
+    clearSession();
+  }
 
   if (!response.ok) {
     const problem = await readProblem(response);

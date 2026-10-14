@@ -32,7 +32,6 @@ function renderPage() {
 async function escalate(reason: string) {
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText('Reason'), reason);
-  await user.type(screen.getByLabelText('Escalated by'), 'Team Lead');
   await user.click(screen.getByRole('button', { name: 'Escalate to High' }));
 }
 

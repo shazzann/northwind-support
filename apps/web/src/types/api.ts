@@ -111,10 +111,9 @@ export interface RaisedTicket {
   triage: TicketTriage;
 }
 
-/** Body of POST /api/tickets/{id}/escalate. */
+/** Body of POST /api/tickets/{id}/escalate. Who escalates comes from the sign-in token. */
 export interface EscalateTicketPayload {
   reason: string;
-  escalatedBy: string;
 }
 
 /** One recorded escalation, with the before and after of everything it changed. */
@@ -180,6 +179,20 @@ export interface CustomerDetail {
   tier: CustomerTier;
   createdAtUtc: string;
   tickets: TicketListItem[];
+}
+
+/** The signed-in agent, enough to greet them. */
+export interface SignedInAgent {
+  id: number;
+  fullName: string;
+  email: string;
+}
+
+/** Response of POST /api/auth/login. */
+export interface LoginResponse {
+  token: string;
+  expiresAtUtc: string;
+  agent: SignedInAgent;
 }
 
 /** RFC 7807 problem document, which is how the API reports every failure. */

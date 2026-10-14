@@ -483,3 +483,28 @@ textarea[aria-invalid='true'] {
 .history__changes dd {
   margin: 0;
 }
+
+.app__account {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login__card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.login__card h1 {
+  font-size: 1.3rem;
+  margin-bottom: var(--gap);
+}

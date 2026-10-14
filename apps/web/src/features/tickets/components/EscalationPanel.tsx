@@ -5,7 +5,6 @@ import { Field } from '../../../components/Field';
 import type { EscalateTicketPayload, EscalationResult, TicketDetail } from '../../../types/api';
 import {
   type EscalationErrors,
-  ESCALATED_BY_MAX_LENGTH,
   escalationBlocker,
   nextPriority,
   REASON_MAX_LENGTH,
@@ -18,7 +17,7 @@ interface EscalationPanelProps {
   onEscalated: (result: EscalationResult) => void;
 }
 
-const emptyForm: EscalateTicketPayload = { reason: '', escalatedBy: '' };
+const emptyForm: EscalateTicketPayload = { reason: '' };
 
 /**
  * Escalates a ticket. Hidden behind an explanation when the rules would refuse, but still
@@ -35,10 +34,7 @@ export function EscalationPanel({ ticket, onEscalated }: EscalationPanelProps) {
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const payload: EscalateTicketPayload = {
-      reason: form.reason.trim(),
-      escalatedBy: form.escalatedBy.trim(),
-    };
+    const payload: EscalateTicketPayload = { reason: form.reason.trim() };
     const validationErrors = validateEscalation(payload);
     setErrors(validationErrors);
     setSubmitError(undefined);
@@ -74,7 +70,7 @@ export function EscalationPanel({ ticket, onEscalated }: EscalationPanelProps) {
         <form className="form" onSubmit={submit} noValidate>
           <p className="field__hint">
             Raises the priority to {nextPriority(ticket.priority)}, starts a new SLA window from now
-            and re-checks who should own it.
+            and re-checks who should own it. It is recorded under your name.
           </p>
 
           <Field
@@ -90,18 +86,6 @@ export function EscalationPanel({ ticket, onEscalated }: EscalationPanelProps) {
                 value={form.reason}
                 maxLength={REASON_MAX_LENGTH}
                 onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))}
-              />
-            )}
-          </Field>
-
-          <Field id="escalation-by" label="Escalated by" error={errors.escalatedBy}>
-            {(fieldProps) => (
-              <input
-                {...fieldProps}
-                type="text"
-                value={form.escalatedBy}
-                maxLength={ESCALATED_BY_MAX_LENGTH}
-                onChange={(event) => setForm((current) => ({ ...current, escalatedBy: event.target.value }))}
               />
             )}
           </Field>
@@ -125,8 +109,5 @@ export function EscalationPanel({ ticket, onEscalated }: EscalationPanelProps) {
 
 /** The API names fields as C# does ("Reason"); the form uses camelCase. */
 function fromApiErrors(fieldErrors: Record<string, string[]>): EscalationErrors {
-  return {
-    reason: fieldErrors.Reason?.[0],
-    escalatedBy: fieldErrors.EscalatedBy?.[0],
-  };
+  return { reason: fieldErrors.Reason?.[0] };
 }

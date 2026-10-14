@@ -1,3 +1,4 @@
+import type { Session } from '../auth/session';
 import type { PagedResult, TicketDetail, TicketEscalation, TicketListItem } from '../types/api';
 
 /** A list row with sensible defaults, so tests only state what they care about. */
@@ -63,6 +64,16 @@ export function ticketEscalation(overrides: Partial<TicketEscalation> = {}): Tic
     reason: 'Customer cannot pay their suppliers',
     escalatedBy: 'Team Lead',
     escalatedAtUtc: '2026-09-24T10:00:00Z',
+    ...overrides,
+  };
+}
+
+/** A signed-in session that is good for another hour. */
+export function session(overrides: Partial<Session> = {}): Session {
+  return {
+    token: 'header.payload.signature',
+    expiresAtUtc: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    agent: { id: 1, fullName: 'Alex Turner', email: 'alex.turner@northwind-support.example' },
     ...overrides,
   };
 }
