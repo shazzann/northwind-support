@@ -15,4 +15,7 @@ public interface IAgentQueries
     /// specialisms - in a single query. Eligibility itself is decided by <see cref="AgentSelector"/>.
     /// </summary>
     Task<IReadOnlyList<AgentCandidate>> GetCandidatesAsync(CancellationToken ct);
+
+    /// <summary>Whether the agent exists and may still work - checked on every authenticated request.</summary>
+    Task<bool> IsActiveAsync(int agentId, CancellationToken ct);
 }

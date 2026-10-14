@@ -45,4 +45,8 @@ public sealed class AgentQueries(SupportDbContext db) : IAgentQueries
                 db.Set<Ticket>().Where(IsOpen).Count(t => t.AssignedAgentId == a.Id),
                 a.Specializations.Select(s => s.CategoryId).ToList()))
             .ToListAsync(ct);
+
+    /// <remarks>A primary-key seek returning one bit: cheap enough to run on every request.</remarks>
+    public Task<bool> IsActiveAsync(int agentId, CancellationToken ct) =>
+        db.Set<Agent>().AsNoTracking().AnyAsync(a => a.Id == agentId && a.IsActive, ct);
 }

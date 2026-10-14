@@ -6,8 +6,8 @@ using SupportDesk.Domain.Repositories;
 namespace SupportDesk.Application.Features.Auth.Queries.GetCurrentAgent;
 
 /// <summary>
-/// The agent the current token belongs to, read fresh so a deactivated agent is turned away
-/// here even while their token has not yet expired.
+/// The agent the current token belongs to, read fresh. Authentication already refuses tokens of
+/// deactivated agents; this also covers an agent removed since the token was issued.
 /// </summary>
 public sealed class GetCurrentAgentQueryHandler(ICurrentUser currentUser, IAgentRepository agents)
 {

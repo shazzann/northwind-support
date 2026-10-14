@@ -4,9 +4,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SupportDesk.Application.Contracts.Auth;
 using SupportDesk.Application.Features.Auth.Commands.Login;
+using SupportDesk.Domain.Aggregates.Agents;
 using SupportDesk.Infrastructure.Data;
 
 namespace SupportDesk.ApiTests;
@@ -70,6 +72,23 @@ public sealed class AuthenticationTests(SupportDeskApiFactory api) : IClassFixtu
             new LoginRequest("yuki.tanaka@northwind-support.example", SupportDbSeeder.DevelopmentPassword));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeactivatingAnAgent_RefusesTheirTokenAtOnce_NotAtExpiry()
+    {
+        var client = await api.SignedInClientAsync("ben.osei@northwind-support.example");
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/tickets")).StatusCode);
+
+        await using (var scope = api.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SupportDbContext>();
+            var ben = await db.Set<Agent>().SingleAsync(a => a.Email == "ben.osei@northwind-support.example");
+            ben.Deactivate();
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/tickets")).StatusCode);
     }
 
     [Fact]

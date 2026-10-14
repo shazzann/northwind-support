@@ -68,7 +68,7 @@ SUPPORTDESK_TEST_SQLSERVER="Server=localhost,1433;User Id=sa;Password=Local_Dev_
 | Suite | What it covers |
 | --- | --- |
 | `SupportDesk.UnitTests` (122) | Domain rules at their boundaries with `FixedClock`/`TicketBuilder`; handlers with Moq; filtering, SLA filter and escalation history as real SQL on SQLite in memory; the report on SQL Server |
-| `SupportDesk.ApiTests` (9, new) | The real HTTP pipeline in memory over SQLite: 401 without / 200 with a token, tampered token, identical login failures, inactive agent, `/me`, actor from token, `/health`, and that only login and health are anonymous |
+| `SupportDesk.ApiTests` (10, new) | The real HTTP pipeline in memory over SQLite: 401 without / 200 with a token, tampered token, identical login failures, inactive agent, a deactivated agent's live token refused, `/me`, actor from token, `/health`, and that only login and health are anonymous |
 | `SupportDesk.ArchitectureTests` (4) | Layer dependencies; the EF model matches the migrations |
 | Web, Vitest (44) | DEFECT-117 regression (every filter, the real dropdown); out-of-order responses; SLA indicator states; escalation validation, 409 and refresh; token attach and 401 handling; login redirect and return; the SLA report page |
 
@@ -147,10 +147,11 @@ iterations, parameters in the hash). Unknown emails are verified against a decoy
 reveal accounts. `POST /api/auth/login` issues an HS256 JWT (`sub`, `name`, `email`), valid **60 minutes** -
 long enough for a working session, short enough to limit a stolen token, since there are no refresh tokens.
 The key comes from `Jwt:SigningKey` / `Jwt__SigningKey` (≥ 32 bytes, checked at start-up); only a labelled
-local placeholder is committed. `GET /api/auth/me` re-reads the agent, refusing deactivated ones. The web
+local placeholder is committed. Every authenticated request also re-checks that the token's agent is still
+active (one primary-key lookup), so deactivating an agent takes effect on their next request, not at expiry. The web
 app attaches the token in `api/client.ts`; any 401 ends the session and `RequireAuth` returns the agent to
 `/login`, then to the page they wanted. **For production:** keys from a secret store with rotation, an
-httpOnly cookie or shorter tokens plus refresh, revocation (or a security stamp check), lockout and rate
+httpOnly cookie or shorter tokens plus refresh, per-token revocation (a security stamp), lockout and rate
 limiting on login, HTTPS everywhere, and audit logging of sign-ins.
 
 ## Docker
@@ -222,8 +223,10 @@ run, not assumed.
 ## Known limitations
 
 - No locking around assignment: two simultaneous creates can both pick an agent with one slot left.
-- Tokens cannot be revoked before expiry; `/me` re-checks the agent but other endpoints trust the token.
-- The token in `sessionStorage` is readable by script on the page (XSS).
+- A stolen token stays valid until it expires (at most 60 min); deactivation is honoured at once, but
+  revoking one token of an active agent needs a security stamp or token version on the agent.
+- The token in `sessionStorage` is readable by script on the page (XSS). React escapes rendered text and
+  nothing injects raw HTML; a Content Security Policy, or an httpOnly cookie with CSRF protection, would harden it.
 - Out of scope, not built: registration, password reset, refresh tokens, MFA, lockout and rate limiting,
   roles, OAuth/SSO, HTTPS in the container, CI/CD changes, notifications.
 - Search uses `LIKE '%…%'` and the SLA filter a computed `CASE`; neither can use an index. At 10 million
