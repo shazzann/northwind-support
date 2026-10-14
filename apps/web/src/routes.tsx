@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { App } from './App';
 import { RequireAuth } from './auth/RequireAuth';
 import { LoginPage } from './features/auth/LoginPage';
+import { SlaReportPage } from './features/reports/SlaReportPage';
 import { NotFoundPage } from './features/NotFoundPage';
 import { CustomerDetailPage } from './features/customers/CustomerDetailPage';
 import { CustomerListPage } from './features/customers/CustomerListPage';
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: 'tickets/:id', element: <TicketDetailPage /> },
       { path: 'customers', element: <CustomerListPage /> },
       { path: 'customers/:id', element: <CustomerDetailPage /> },
+      { path: 'reports/sla', element: <SlaReportPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

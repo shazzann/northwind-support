@@ -245,7 +245,17 @@ textarea[aria-invalid='true'] {
   color: var(--colour-muted);
 }
 
-.table tbody tr:last-child td {
+/* A row header names the row (an agent, a priority): it reads like data, not a column label. */
+.table tbody th {
+  font-size: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--colour-text);
+  font-weight: 600;
+}
+
+.table tbody tr:last-child td,
+.table tbody tr:last-child th {
   border-bottom: none;
 }
 

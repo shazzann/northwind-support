@@ -181,6 +181,31 @@ export interface CustomerDetail {
   tickets: TicketListItem[];
 }
 
+export type SlaSummaryGrouping = 'Agent' | 'Priority';
+
+/** One row of the SLA summary: an agent ("Unassigned" included) or a priority. */
+export interface SlaSummaryGroup {
+  group: string;
+  total: number;
+  breached: number;
+  atRisk: number;
+  withinSla: number;
+  met: number;
+  noSla: number;
+  /** Breached as a share (0-1) of tickets with an SLA; null when none have one. */
+  breachRate: number | null;
+  /** Creation to resolution, over resolved tickets; null when none are resolved. */
+  averageResolutionHours: number | null;
+}
+
+/** Response of GET /api/reports/sla-summary. */
+export interface SlaSummary {
+  from: string | null;
+  to: string | null;
+  groupBy: SlaSummaryGrouping;
+  groups: SlaSummaryGroup[];
+}
+
 /** The signed-in agent, enough to greet them. */
 export interface SignedInAgent {
   id: number;

@@ -70,7 +70,7 @@ SUPPORTDESK_TEST_SQLSERVER="Server=localhost,1433;User Id=sa;Password=Local_Dev_
 | `SupportDesk.UnitTests` (122) | Domain rules at their boundaries with `FixedClock`/`TicketBuilder`; handlers with Moq; filtering, SLA filter and escalation history as real SQL on SQLite in memory; the report on SQL Server |
 | `SupportDesk.ApiTests` (9, new) | The real HTTP pipeline in memory over SQLite: 401 without / 200 with a token, tampered token, identical login failures, inactive agent, `/me`, actor from token, `/health`, and that only login and health are anonymous |
 | `SupportDesk.ArchitectureTests` (4) | Layer dependencies; the EF model matches the migrations |
-| Web, Vitest (39) | DEFECT-117 regression (every filter, the real dropdown); out-of-order responses; SLA indicator states; escalation validation, 409 and refresh; token attach and 401 handling; login redirect and return |
+| Web, Vitest (44) | DEFECT-117 regression (every filter, the real dropdown); out-of-order responses; SLA indicator states; escalation validation, 409 and refresh; token attach and 401 handling; login redirect and return; the SLA report page |
 
 **Deliberately not tested:** CSS and layout; Swagger; `SystemClock`; the seeder's data beyond what the
 API tests use; the Docker image (checked by hand, below); browser-level end-to-end (checked by hand).
@@ -183,7 +183,9 @@ them), and add a container `HEALTHCHECK`.
 `GET /api/reports/sla-summary?from=&to=&groupBy=agent|priority` - per group: total, breached, at risk,
 within, met, no-SLA, breach rate (over tickets that have an SLA) and average resolution hours, for tickets
 created in `[from, to)`. One SQL statement (`GROUP BY` with conditional counts); the SLA status inside it is
-the same composed rule.
+the same composed rule. In the web app: **SLA report** in the header (`/reports/sla`) - group by agent or
+priority, an optional date range of whole UTC days (the end day included), and the table updates as the
+controls change; a reversed range is refused before any request.
 
 ## AI usage
 
@@ -228,7 +230,6 @@ run, not assumed.
   tickets: full-text search, and either a persisted at-risk column refreshed on threshold changes or
   pre-aggregated reporting.
 - `NextReferenceAsync` assumes a single API instance (a database sequence would fix it).
-- No UI for the SLA summary report (the brief asks only for the endpoint).
 
 ## Time spent
 
