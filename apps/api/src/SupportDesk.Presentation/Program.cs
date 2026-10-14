@@ -63,8 +63,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
 
-    // Keeps a developer machine one command away from a working database.
+// On for a developer machine and the compose stack, off by default: see the README for how
+// migrations run in a real deployment.
+if (app.Configuration.GetValue<bool>("Database:MigrateAndSeedOnStartup"))
+{
     await app.MigrateAndSeedAsync();
 }
 
@@ -74,6 +78,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthEndpoint();
 
 app.Run();
 

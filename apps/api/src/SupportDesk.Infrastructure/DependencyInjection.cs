@@ -29,6 +29,9 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<SupportDbContext>());
 
+        // Whether the database answers; reported by the host's health endpoint.
+        services.AddHealthChecks().AddDbContextCheck<SupportDbContext>("database");
+
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
 

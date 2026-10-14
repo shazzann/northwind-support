@@ -98,14 +98,26 @@ public sealed class AuthenticationTests(SupportDeskApiFactory api) : IClassFixtu
     }
 
     [Fact]
-    public void OnlyLogin_IsOpenToAnonymousCallers()
+    public void OnlyLoginAndHealth_AreOpenToAnonymousCallers()
     {
         var anonymous = api.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .OfType<RouteEndpoint>()
             .Where(endpoint => endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null)
-            .Select(endpoint => endpoint.RoutePattern.RawText);
+            .Select(endpoint => endpoint.RoutePattern.RawText)
+            .Order();
 
-        Assert.Equal(["api/auth/login"], anonymous);
+        Assert.Equal(["/health", "api/auth/login"], anonymous);
+    }
+
+    [Fact]
+    public async Task Health_IsOpen_AndReportsTheDatabase()
+    {
+        var response = await api.CreateClient().GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var report = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Healthy", report.GetProperty("status").GetString());
+        Assert.Equal("Healthy", report.GetProperty("checks").GetProperty("database").GetString());
     }
 
     private static async Task<JsonElement> Problem(HttpResponseMessage response) =>
