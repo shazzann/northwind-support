@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using SupportDesk.Domain.Aggregates.Agents;
@@ -10,20 +11,25 @@ using SupportDesk.UnitTests.TestDoubles;
 namespace SupportDesk.UnitTests.Infrastructure.Queries;
 
 /// <summary>
-/// A real, throwaway database for read-side tests: SQLite in memory, built from the same EF
-/// model as production. Queries run as SQL, so anything EF cannot translate fails here too.
+/// A real, throwaway database for read-side tests, built from the same EF model as production.
+/// Queries run as SQL, so anything EF cannot translate fails here too. SQLite in memory by
+/// default; <see cref="OnSqlServer"/> for queries that use SQL Server's own functions.
 /// </summary>
 internal sealed class TicketQueryDatabase : IDisposable
 {
-    private readonly SqliteConnection _connection;
+    private readonly SqliteConnection? _connection;
 
+    /// <summary>SQLite in memory: fast, and needs nothing installed.</summary>
     public TicketQueryDatabase()
+        : this(OpenSqlite(out var connection), connection)
     {
-        // The in-memory database lives exactly as long as this connection stays open.
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
+    }
 
-        Db = new SupportDbContext(new DbContextOptionsBuilder<SupportDbContext>().UseSqlite(_connection).Options);
+    private TicketQueryDatabase(DbContextOptions<SupportDbContext> options, SqliteConnection? connection)
+    {
+        _connection = connection;
+
+        Db = new SupportDbContext(options);
         Db.Database.EnsureCreated();
 
         Contoso = Add(new Customer("Contoso Ltd", "support@contoso.test", null, CustomerTier.Premium, FixedClock.DefaultNow));
@@ -35,6 +41,23 @@ internal sealed class TicketQueryDatabase : IDisposable
     }
 
     public SupportDbContext Db { get; }
+
+    /// <summary>
+    /// A fresh database with a unique name on the SQL Server in
+    /// <see cref="SqlServerFactAttribute.ConnectionStringVariable"/>, dropped on dispose.
+    /// </summary>
+    public static TicketQueryDatabase OnSqlServer()
+    {
+        var connectionString = new SqlConnectionStringBuilder(
+            Environment.GetEnvironmentVariable(SqlServerFactAttribute.ConnectionStringVariable))
+        {
+            InitialCatalog = $"SupportDeskTests_{Guid.NewGuid():N}"
+        }.ConnectionString;
+
+        return new TicketQueryDatabase(
+            new DbContextOptionsBuilder<SupportDbContext>().UseSqlServer(connectionString).Options,
+            connection: null);
+    }
 
     public Customer Contoso { get; }
 
@@ -51,6 +74,7 @@ internal sealed class TicketQueryDatabase : IDisposable
     /// <summary>Saves a ticket; anything not given gets a harmless default.</summary>
     /// <param name="slaStartedAt">Starts a 4 h SLA window here; no SLA when null.</param>
     /// <param name="resolvedAfter">Resolves the ticket this long after its window started.</param>
+    /// <param name="createdAt">When the ticket was raised; <see cref="FixedClock.DefaultNow"/> by default.</param>
     public Ticket AddTicket(
         string reference,
         string title = "Something is not working",
@@ -60,7 +84,8 @@ internal sealed class TicketQueryDatabase : IDisposable
         TicketStatus status = TicketStatus.New,
         Agent? agent = null,
         DateTime? slaStartedAt = null,
-        TimeSpan? resolvedAfter = null)
+        TimeSpan? resolvedAfter = null,
+        DateTime? createdAt = null)
     {
         var ticket = Ticket.Raise(
             reference,
@@ -69,7 +94,7 @@ internal sealed class TicketQueryDatabase : IDisposable
             (customer ?? Fabrikam).Id,
             (category ?? General).Id,
             priority,
-            FixedClock.DefaultNow);
+            createdAt ?? FixedClock.DefaultNow);
 
         if (agent is not null)
         {
@@ -96,8 +121,22 @@ internal sealed class TicketQueryDatabase : IDisposable
 
     public void Dispose()
     {
+        if (_connection is null)
+        {
+            Db.Database.EnsureDeleted();
+        }
+
         Db.Dispose();
-        _connection.Dispose();
+        _connection?.Dispose();
+    }
+
+    private static DbContextOptions<SupportDbContext> OpenSqlite(out SqliteConnection connection)
+    {
+        // The in-memory database lives exactly as long as this connection stays open.
+        connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        return new DbContextOptionsBuilder<SupportDbContext>().UseSqlite(connection).Options;
     }
 
     private T Add<T>(T entity)
